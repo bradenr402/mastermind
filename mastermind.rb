@@ -1,3 +1,5 @@
+require 'yaml'
+
 # class defining methods for the gameplay
 class Game
   def initialize
@@ -138,8 +140,8 @@ end
 # class defining methods for displaying nad printing the results of a guess
 class Results
   def self.display_results(code, guess)
-    @code = Marshal.load(Marshal.dump(code))
-    @guess = Marshal.load(Marshal.dump(guess)).map(&:to_s)
+    @code = YAML.load(YAML.dump(code))
+    @guess = YAML.load(YAML.dump(guess)).map(&:to_s)
     @results = ''
 
     i = 0
