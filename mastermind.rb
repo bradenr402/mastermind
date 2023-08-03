@@ -1,163 +1,214 @@
-module Mastermind
-  class Game
+# class defining methods for the gameplay
+class Game
+  def initialize
+    @code_maker = player_role_selection == '1' ? 'computer' : 'player'
+    create_code
 
-    def initialize
-      puts "Welcome to Mastermind!"
-      puts "----------------------\n\n"
-      puts "Would you like to be the Code Maker or the Code Breaker?"
-      print "Enter '1' for Code Maker or '2' for Code Breaker: "
+    puts "\n  Let the game begin!\n  -------------------\n\n"
 
-      input = gets.chomp.to_i
-
-      until input == 1 || input == 2
-        puts "Invalid input! Try again!"
-        print "Enter '1' for Code Maker or '2' for Code Breaker: "
-        input = gets.chomp.to_i
-      end
-
-      @player_role = select_role(input)
-      puts "\nYou have selected \"#{@player_role}\""
-      if @player_role == "Code Maker"
-        puts "Enter a 4 digit secret code using digits 1-6 for the computer to guess. "
-        print "Secret code: "
-        @code = choose_code
-        puts "\nYour secret code is: #{@code}"
-      elsif @player_role == "Code Breaker"
-        puts "The computer has generated a 4 digit secret code using the digits 1-6."
-        puts "Your goal is to guess this code in 10 guesses or less."
-        puts "After each guess, you will be provided with the results of your guess."
-        puts "An 'O' indicates your guess contains a correct digit in the correct position."
-        puts "An 'X' indicates your guess contains a correct digit, but in the wrong position."
-        puts "The results will be in no particular order."
-        @code = generate_code
-      end
-
-      puts "\nLet the game begin!"
-      puts "----------------------\n\n"
-
-      @remaining_guesses = 12
-
-      if @player_role == "Code Breaker"
-        # player is the guesser
-      elsif @player_role == "Code Breaker"
-        # computer is the guesser
-      end
-
-
-    end
-
-    def generate_code
-      code = Array.new
-      4.times { code.push(rand(1..6)) }
-      code.join.split('')
-    end
-
-    def choose_code
-      code = gets.chomp.split('')
-      until (code.all? { |digit| digit.to_i <= 6 && digit.to_i >= 1} && code.size == 4)
-        puts "Invalid code! Please enter a 4 digit code using digits 1-6."
-        print "Secret code: "
-        code = gets.chomp.split('')
-      end
-      code
-    end
-
-    def play
-      loop do
-        guess = guess_code
-        @remaining_guesses -= 1
-
-        if guess_is_correct?(guess)
-          puts "You win!"
-          puts "The secret code was: #{@code}."
-          break
-        elsif @remaining_guesses == 0
-          puts "Out of guesses! You lose!"
-          puts "The secret code was: #{@code}."
-          break
-        end
-        puts "Incorrect!"
-        puts "Results: #{guess_feedback(guess)}\n"
-
-      end
-
-      puts "\nThe Code Maker scored #{12 - @remaining_guesses} points."
-    end
-
-    def guess_is_correct?(guess)
-      if guess == @code
-        true
-      else
-        false
-      end
-    end
-
-    def guess_feedback(guess)
-      feedback = ''
-      i = 0
-      while i < 4
-        if guess[i] == @code[i]
-          feedback << 'O'
-        elsif @code[i] == guess[0] || @code[i] == guess[1] || @code[i] == guess[2] || @code[i] == guess[3]
-          feedback << 'X'
-        end
-        i += 1
-      end
-      feedback.split('').shuffle.join
-    end
-
-    def guess_code
-        print "Guess ##{@remaining_guesses}: "
-        guess = get_guess
-    end
-
-    def get_guess
-      guess = gets.chomp.split('')
-      until (guess.all? { |digit| digit.to_i <= 6 && digit.to_i >= 1} && guess.size == 4)
-        puts "Invalid guess! Please enter a 4 digit code using digits 1-6."
-        print "Guess ##{@remaining_guesses}: "
-        guess = gets.chomp.split('')
-      end
-      guess
-    end
-
-    def select_role(input)
-      if input == 1
-        "Code Maker"
-      elsif input == 2
-        "Code Breaker"
-      end
-    end
-
-    # def computer_guess
-    #   print "Guess ##{@remaining_guesses}: "
-    #   guess =
-    # end
+    start_guess_loop
+    play_again
   end
 
-  class Player
-    def initialize(game)
-      @game = game
+  def player_role_selection
+    puts "\n  Welcome to Mastermind!"
+    puts "  ----------------------\n\n"
+    puts '  Would you like to be the Code Maker or the Code Breaker?'
+
+    input = ''
+    until %w[1 2].include?(input)
+      print "  Enter '1' for Code Breaker or '2' for Code Maker: "
+      input = gets.chomp
+    end
+    input
+  end
+
+  def code_breaker_rules_description
+    puts '  The computer has generated a 4 digit secret code using the digits 1-6.'
+    puts '  Your goal is to guess this code in 10 guesses or less.'
+    puts "\n  After each guess, you will be given clues about the code: "
+    puts "    Each 'O' means that you have 1 correct number in the correct position"
+    puts "    Each 'X' means that you have 1 correct number in the wrong position"
+    puts "\n  You have 12 attempts to find the secret code. Good luck!\n"
+  end
+
+  def create_code
+    if @code_maker == 'player'
+      @code = Player.player_choose_code
+    elsif @code_maker == 'computer'
+      @code = Computer.computer_generate_code
+    end
+  end
+
+  def start_guess_loop
+    if @code_maker == 'player'
+      Computer.guess_loop(@code_maker, @code)
+    elsif @code_maker == 'computer'
+      Player.guess_loop(@code_maker, @code)
+    end
+  end
+
+  def play_again
+    puts '  Would you like to play again?'
+    again = ''
+    until %w[y n].include?(again)
+      print "  Enter 'y' to play again or 'n' to quit: "
+      again = gets.chomp.downcase
+    end
+    again == 'y' ? Game.new : @code_maker = 'player'
+  end
+end
+
+# class defining methods for the human player
+class Player
+  def self.player_choose_code
+    @code = []
+    print "  Enter a 4 digit secret code using digits 1-6 for the computer to guess. \n\n  Secret code: "
+    @code = gets.chomp.split('')
+    until @code.all? { |digit| digit.to_i.between?(1, 6) } && @code.size == 4
+      print "  Invalid code! Please enter a 4 digit code using digits 1-6.\n\n  Secret code: "
+      @code = gets.chomp.split('')
+    end
+
+    puts "\n  Your secret code is: #{@code}"
+    @code
+  end
+
+  def self.guess_loop(code_maker, code)
+    attempt = 1
+    while attempt <= 12
+      print "\n  Attempt ##{attempt}: "
+      @guess = Player.get_guess(attempt)
+      results = Results.display_results(code, @guess)
+
+      GameOverCheck.check(code_maker, results, attempt, code) ? break : Results.print_results(@guess, results, attempt)
+
+      attempt += 1
+    end
+  end
+
+  def self.get_guess(attempt)
+    guess = gets.chomp.split('')
+    until guess.all? { |digit| digit.to_i.between?(1, 6) } && guess.size == 4
+      puts '  Invalid guess! Please enter a 4 digit code using digits 1-6.'
+      print "  Attempt ##{attempt}: "
+      guess = gets.chomp.split('')
+    end
+    guess
+  end
+end
+
+# class defining methods for the computer player
+class Computer
+  def self.computer_generate_code
+    @code = []
+    4.times { @code.push(rand(1..6)) }
+    @code.join.split('')
+  end
+
+  def self.guess_loop(code_maker, code)
+    attempt = 1
+    array_of_possibilities = create_array
+
+    while attempt <= 12
+      @guess = array_of_possibilities[0]
+
+      results = Results.display_results(code, @guess)
+      sleep(1)
+      Results.print_results(@guess, results, attempt)
+
+      GameOverCheck.check(code_maker, results, attempt, code) ? break : results = CheckCode.results(code, @guess)
+
+      i = array_of_possibilities.length - 1
+      while i >= 0
+        possible_results = CheckCode.results(@guess, array_of_possibilities[i])
+        array_of_possibilities.delete_at(i) unless results == possible_results
+        i -= 1
+      end
+      attempt += 1
+    end
+  end
+
+  def self.create_array
+    source = %w[1 2 3 4 5 6]
+    source.repeated_permutation(4).to_a
+  end
+end
+
+# class defining methods for displaying nad printing the results of a guess
+class Results
+  def self.display_results(code, guess)
+    @code = Marshal.load(Marshal.dump(code))
+    @guess = Marshal.load(Marshal.dump(guess)).map(&:to_s)
+    @results = ''
+
+    i = 0
+    while i < @code.length
+      if @code[i] == @guess[i]
+        @results << 'O'
+        @code.delete_at(i)
+        @guess.delete_at(i)
+      else
+        i += 1
+      end
+    end
+
+    diff = @code - (@code - @guess)
+    j = 0
+    while j < diff.length
+      @results << 'X'
+      j += 1
+    end
+    @results
+  end
+
+  def self.print_results(guess, results, attempt)
+    puts "\n              Guess: #{guess}"
+    puts "              Clues: #{results}\n"
+    puts "  Guesses remaining: #{12 - attempt} \n"
+  end
+end
+
+# class defining methods to check the results of the code with a guess
+class CheckCode
+  def self.results(code, guess)
+    @results = ''
+
+    (0...code.length).each do |i|
+      if code[i] == guess[i]
+        @results << 'O'
+      elsif code[i] == guess[0] || guess[1] || guess[2] || guess[3]
+        @results << 'X'
+      end
+    end
+    @results
+  end
+end
+
+# class defining a method to check if the game is over
+class GameOverCheck
+  def self.check(code_maker, results, attempt, code)
+    if results == 'OOOO'
+      if code_maker == 'computer'
+        puts "  Great job! You figured out the code in #{attempt} guesses."
+      else
+        puts "\n  The computer deciphered your code in #{attempt} guesses."
+        puts "  Better luck next time.\n\n"
+      end
+      true
+    elsif attempt == 12
+      if code_maker == 'player'
+        puts '  Great job! The computer failed to decipher your code!'
+      else
+        puts "\n  Good effort, but you failed to guess the code."
+        puts "  The secret code was: #{code}."
+        puts "  Better luck next time.\n\n"
+      end
+      true
+    else
+      false
     end
   end
 end
 
-include Mastermind
-
-Game.new.play
-
-# decide who is code_maker and who is code_breaker
-
-# code_maker creates code
-# code_breaker starts round by making first guess
-# code_breaker:
-  # correct value & correct position: 'O'
-  # correct value, incorrect position: 'X'
-  #! in no particular order!
-# repeat 9 more times (10 total)
-
-# when code_breaker guesses correctly, the code is revealed
-
-# Scoring:
-  # code_maker: 1 point per guess by code_breaker
-  # 11 points if code_breaker fails to guess code
+Game.new
